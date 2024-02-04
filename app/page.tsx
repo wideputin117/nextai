@@ -39,7 +39,9 @@ const [loading, setLoading] = useState<Boolean>(false);
  const [model, setModel] = useState<ObjectDetection>();
 // media recorder
 const mediaRecorderRef= useRef<MediaRecorder | null>(null);
+
 // initialize the media recorder
+// useEffect for recording the video by handler
 useEffect(() => {
   if (webcamRef && webcamRef.current) {
     const stream = (webcamRef.current.video as any).captureStream();
@@ -109,7 +111,7 @@ async function runPrediction() {
       })
 
       if (isPerson && autoRecordEnabled) {
-        setIsRecording(true);
+        startRecording(true);
       }
     }
   }
@@ -142,12 +144,61 @@ async function runPrediction() {
 
   // handler functions
   function userPromptScreenshot() {
+   // take picture
+   if(!webcamRef.current){
+    toast('Camera not found. Please refresh');
+  }else{
+    const imgSrc = webcamRef.current.getScreenshot();
+    console.log(imgSrc);
+    const blob = base64toBlob(imgSrc);
 
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${formatDate(new Date())}.png`
+    a.click();
+  }
+  // save it to downloads
   }
   // video recording functions
   function userPromptRecord() {
-    setIsRecording((prev)=> !prev)
+     
+    if(!webcamRef.current){
+      toast("Camera is not found.Please refresh")
+    }
+
+    if(mediaRecorderRef.current?.state === 'recording'){
+       // check if recording
+       // then stop recording
+       // and save the data in downloads
+       mediaRecorderRef.current.requestData();
+       clearTimeout(stopTimeout);
+       mediaRecorderRef.current.stop();
+       toast('Recording saved to downloads') 
+    }
+    else{
+      // if not recording
+      // start recording
+       startRecording(false);
+    }
+     
   }
+  // startRecording function handler
+ function startRecording(doBeep: Boolean){
+  if(webcamRef.current && mediaRecorderRef.current?.state !== 'recording'){
+    mediaRecorderRef.current?.start();
+    // playing the beep sound when startRecording is true
+    doBeep && beep(volume);
+  // to clear the timeout after user stops the recording
+    stopTimeout = setTimeout(()=>{
+      if(mediaRecorderRef.current?.state === 'recording'){
+        mediaRecorderRef.current.requestData();
+        mediaRecorderRef.current.stop();
+      } 
+    },30000)
+  }
+ }
+
   // function for auto record
   function toggleAutoRecord() {
       if(autoRecordEnabled){
@@ -350,14 +401,14 @@ async function runPrediction() {
 export default HomePage
 
 function resizeCanvas(canvasRef: React.RefObject<HTMLCanvasElement>, webcamRef: React.RefObject<Webcam>) {
-   const canvas = canvasRef.current;
-   const video= webcamRef.current?.video;
+  const canvas = canvasRef.current;
+  const video = webcamRef.current?.video;
 
-   if((canvas && video)){
-    const {videoWidth, videoHeight} = video;
-    canvas.width= videoWidth;
+  if ((canvas && video)) {
+    const { videoWidth, videoHeight } = video;
+    canvas.width = videoWidth;
     canvas.height = videoHeight;
-   }
+  }
 }
   
 
@@ -379,3 +430,14 @@ function formatDate(d: Date) {
   return formattedDate;
 }
 
+function base64toBlob(base64Data: any) {
+  const byteCharacters = atob(base64Data.split(",")[1]);
+  const arrayBuffer = new ArrayBuffer(byteCharacters.length);
+  const byteArray = new Uint8Array(arrayBuffer);
+
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteArray[i] = byteCharacters.charCodeAt(i);
+  }
+
+  return new Blob([arrayBuffer], { type: "image/png" }); // Specify the image type here
+}

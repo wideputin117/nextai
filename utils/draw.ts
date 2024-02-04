@@ -17,6 +17,7 @@ export function drawOnCanvas(
       ctx.fillStyle = name === "person" ? "#FF0F0F" : "#00B612";
       ctx.globalAlpha = 0.4;
 
+    // to check if video is mirrored
       mirrored
         ? ctx.roundRect(ctx.canvas.width - x, y, -width, height, 8)
         : ctx.roundRect(x, y, width, height, 8);
