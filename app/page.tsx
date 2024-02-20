@@ -113,6 +113,9 @@ async function runPrediction() {
       if (isPerson && autoRecordEnabled) {
         startRecording(true);
       }
+      else{
+        startRecording(false);
+      }
     }
   }
 }
